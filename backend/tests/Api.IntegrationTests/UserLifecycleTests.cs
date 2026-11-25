@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Api.IntegrationTests.Fixtures;
 using Application.Abstractions;
+using Application.Users;
 using Domain.Users;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -195,6 +196,10 @@ public sealed class UserLifecycleTests(PostgresFixture postgres)
     {
         public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("probe-internal-error");
+
+        public Task<(IReadOnlyList<User> Items, int TotalItems)> ListAsync(
+            int page, int pageSize, UserSortField sortField, SortDirection sortDirection, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
 
         public Task AddAsync(User user, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task UpdateAsync(User user, CancellationToken cancellationToken) => throw new NotSupportedException();

@@ -21,6 +21,17 @@ public sealed class UsersController(ISender sender) : ControllerBase
         return Created($"/api/users/{user.Id}", UserResponse.From(user));
     }
 
+    [HttpGet]
+    [ProducesResponseType(typeof(ListUsersResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ListUsersResponse>> List(
+        [FromQuery] ListUsersParameters parameters, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new ListUsersQuery(
+            parameters.Page, parameters.PageSize, parameters.SortBy, parameters.SortDirection), cancellationToken);
+        return Ok(ListUsersResponse.From(result));
+    }
+
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
