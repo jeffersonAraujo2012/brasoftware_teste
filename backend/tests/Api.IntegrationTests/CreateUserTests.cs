@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Api.IntegrationTests.Fixtures;
+using Domain.ValueObjects;
 using Infra.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,6 +78,8 @@ public sealed class CreateUserTests(PostgresFixture postgres)
     [Theory]
     [InlineData("{", "body")]
     [InlineData("{\"status\":42}", "status")]
+    [InlineData("{\"status\":\"ACTIVE\"}", "status")]
+    [InlineData("{\"status\":\"pending\"}", "status")]
     public async Task MalformedJsonReturnsProblemDetails(string json, string field)
     {
         await using var factory = await ApiFactory.CreateAsync(postgres);
@@ -112,6 +115,7 @@ public sealed class CreateUserTests(PostgresFixture postgres)
         await using var factory = await ApiFactory.CreateAsync(postgres);
         using var client = factory.CreateClient();
         const string cpf = "01234567890";
+        var storedCpf = Cpf.Create(cpf);
 
         var requests = await Task.WhenAll(
             client.PostAsJsonAsync("/api/users", new { fullName = "First", email = "first@example.test", cpf }),
@@ -124,7 +128,7 @@ public sealed class CreateUserTests(PostgresFixture postgres)
 
         await using var scope = factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
-        Assert.Equal(1, await database.Users.CountAsync(user => user.Cpf == cpf));
+        Assert.Equal(1, await database.Users.CountAsync(user => user.Cpf == storedCpf));
     }
 
     private static HttpClient CreateTimedClient(ApiFactory factory) =>

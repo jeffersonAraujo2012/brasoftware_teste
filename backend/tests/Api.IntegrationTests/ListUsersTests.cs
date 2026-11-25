@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Api.IntegrationTests.Fixtures;
-using Domain.Users;
+using Domain.Entities;
+using Domain.Enums;
+using Domain.ValueObjects;
 using Infra.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -150,7 +152,7 @@ public sealed class ListUsersTests(PostgresFixture postgres)
             await using var scope = factory.Services.CreateAsyncScope();
             var database = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
             database.Users.AddRange(Seeds.Select(seed => User.Create(
-                UserId(seed.Id), seed.FullName, seed.Email, seed.Cpf,
+                UserId(seed.Id), seed.FullName, Email.Create(seed.Email), Cpf.Create(seed.Cpf),
                 new DateTime(2026, 1, seed.Day, 10, 0, 0, DateTimeKind.Utc), seed.Status)));
             await database.SaveChangesAsync();
             return factory;

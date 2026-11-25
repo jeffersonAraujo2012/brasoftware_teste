@@ -1,4 +1,5 @@
-using Application.Users;
+using Application.Exceptions;
+using Domain.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,9 @@ internal sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) :
                 break;
             case UserNotFoundException notFound:
                 problem = ApiProblemDetails.Create(context, StatusCodes.Status404NotFound, notFound.Message);
+                break;
+            case DomainException domain:
+                problem = ApiProblemDetails.Create(context, StatusCodes.Status400BadRequest, domain.Message);
                 break;
             case UserConflictException conflict:
                 problem = ApiProblemDetails.Create(context, StatusCodes.Status409Conflict,

@@ -1,5 +1,10 @@
-using Api.Contracts;
-using Application.Users;
+using Api.Requests;
+using Api.Responses;
+using Application.Users.Commands.CreateUser;
+using Application.Users.Commands.DeleteUser;
+using Application.Users.Commands.UpdateUser;
+using Application.Users.Queries.GetUser;
+using Application.Users.Queries.ListUsers;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,10 +30,10 @@ public sealed class UsersController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(ListUsersResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ListUsersResponse>> List(
-        [FromQuery] ListUsersParameters parameters, CancellationToken cancellationToken)
+        [FromQuery] ListUsersRequest request, CancellationToken cancellationToken)
     {
         var result = await sender.Send(new ListUsersQuery(
-            parameters.Page, parameters.PageSize, parameters.SortBy, parameters.SortDirection), cancellationToken);
+            request.Page, request.PageSize, request.SortBy, request.SortDirection), cancellationToken);
         return Ok(ListUsersResponse.From(result));
     }
 

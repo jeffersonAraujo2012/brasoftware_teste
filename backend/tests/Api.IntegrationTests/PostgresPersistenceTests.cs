@@ -1,7 +1,9 @@
 using Api.IntegrationTests.Fixtures;
-using Application.Abstractions;
-using Application.Users;
-using Domain.Users;
+using Application.Exceptions;
+using Application.Interfaces;
+using Domain.Entities;
+using Domain.Enums;
+using Domain.ValueObjects;
 using Infra.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,8 +20,8 @@ public sealed class PostgresPersistenceTests(PostgresFixture postgres)
     public async Task MigrationCreatesUsersWithUtcTimestamp()
     {
         await using var factory = await ApiFactory.CreateAsync(postgres);
-        var user = User.Create(Guid.NewGuid(), "Sample Person", "person@example.test",
-            "01234567890", CreatedAt, UserStatus.Inactive);
+        var user = User.Create(Guid.NewGuid(), "Sample Person", Email.Create("person@example.test"),
+            Cpf.Create("01234567890"), CreatedAt, UserStatus.Inactive);
 
         await InsertAsync(factory, user);
 
@@ -28,7 +30,7 @@ public sealed class PostgresPersistenceTests(PostgresFixture postgres)
         var reloaded = await reader.GetByIdAsync(user.Id, CancellationToken.None);
 
         Assert.NotNull(reloaded);
-        Assert.Equal("01234567890", reloaded.Cpf);
+        Assert.Equal("01234567890", reloaded.Cpf.Value);
         Assert.Equal(CreatedAt, reloaded.CreatedAt);
         Assert.Equal(DateTimeKind.Utc, reloaded.CreatedAt.Kind);
         Assert.Equal(UserStatus.Inactive, reloaded.Status);
@@ -40,9 +42,10 @@ public sealed class PostgresPersistenceTests(PostgresFixture postgres)
     public async Task UniqueIndexesReportConflictField(string email, string cpf, string expectedField)
     {
         await using var factory = await ApiFactory.CreateAsync(postgres);
-        await InsertAsync(factory, User.Create(Guid.NewGuid(), "Sample Person", "person@example.test",
-            "01234567890", CreatedAt, UserStatus.Active));
-        var candidate = User.Create(Guid.NewGuid(), "Another Person", email, cpf, CreatedAt, UserStatus.Active);
+        await InsertAsync(factory, User.Create(Guid.NewGuid(), "Sample Person", Email.Create("person@example.test"),
+            Cpf.Create("01234567890"), CreatedAt, UserStatus.Active));
+        var candidate = User.Create(Guid.NewGuid(), "Another Person", Email.Create(email), Cpf.Create(cpf),
+            CreatedAt, UserStatus.Active);
 
         var error = await Assert.ThrowsAsync<UserConflictException>(() => InsertAsync(factory, candidate));
 
@@ -53,8 +56,8 @@ public sealed class PostgresPersistenceTests(PostgresFixture postgres)
     public async Task MigrationRejectsInvalidStatusAtDatabase()
     {
         await using var factory = await ApiFactory.CreateAsync(postgres);
-        var user = User.Create(Guid.NewGuid(), "Sample Person", "person@example.test",
-            "01234567890", CreatedAt, UserStatus.Active);
+        var user = User.Create(Guid.NewGuid(), "Sample Person", Email.Create("person@example.test"),
+            Cpf.Create("01234567890"), CreatedAt, UserStatus.Active);
         await InsertAsync(factory, user);
 
         await using var scope = factory.Services.CreateAsyncScope();
@@ -69,8 +72,8 @@ public sealed class PostgresPersistenceTests(PostgresFixture postgres)
     public async Task UpdateOfConcurrentlyDeletedUserReportsNotFound()
     {
         await using var factory = await ApiFactory.CreateAsync(postgres);
-        var user = User.Create(Guid.NewGuid(), "Sample Person", "person@example.test",
-            "01234567890", CreatedAt, UserStatus.Active);
+        var user = User.Create(Guid.NewGuid(), "Sample Person", Email.Create("person@example.test"),
+            Cpf.Create("01234567890"), CreatedAt, UserStatus.Active);
         await InsertAsync(factory, user);
 
         await using var reader = factory.Services.CreateAsyncScope();

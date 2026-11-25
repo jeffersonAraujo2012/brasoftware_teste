@@ -1,4 +1,6 @@
-using Domain.Users;
+using Domain.Entities;
+using Domain.Enums;
+using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,8 +19,12 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(user => user.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(user => user.FullName).HasColumnName("full_name").HasMaxLength(User.MaxFullNameLength).IsRequired();
-        builder.Property(user => user.Email).HasColumnName("email").HasMaxLength(User.MaxEmailLength).IsRequired();
-        builder.Property(user => user.Cpf).HasColumnName("cpf").HasMaxLength(11).IsRequired();
+        builder.Property(user => user.Email).HasColumnName("email").HasMaxLength(Email.MaxLength)
+            .HasConversion(email => email.Value, value => Email.Create(value))
+            .IsRequired();
+        builder.Property(user => user.Cpf).HasColumnName("cpf").HasMaxLength(Cpf.Length)
+            .HasConversion(cpf => cpf.Value, value => Cpf.Create(value))
+            .IsRequired();
         builder.Property(user => user.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
         builder.Property(user => user.Status).HasColumnName("status").HasMaxLength(8)
             .HasConversion(

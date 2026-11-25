@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -18,6 +20,21 @@ public sealed class HostingTests
         using var response = await client.GetAsync("/openapi/v1.json");
 
         Assert.Equal(expected, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpenApiDescribesStatusAsContractStrings()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(
+            builder => builder.UseEnvironment("Development"));
+        using var client = factory.CreateClient();
+
+        var document = await client.GetFromJsonAsync<JsonElement>("/openapi/v1.json");
+        var status = document.GetProperty("components").GetProperty("schemas").GetProperty("UserStatus");
+
+        Assert.Equal("string", status.GetProperty("type").GetString());
+        Assert.Equal(new[] { "active", "inactive" },
+            status.GetProperty("enum").EnumerateArray().Select(value => value.GetString()));
     }
 
     [Theory]

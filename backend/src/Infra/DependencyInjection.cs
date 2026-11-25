@@ -1,5 +1,6 @@
-using Application.Abstractions;
+using Application.Interfaces;
 using Infra.Persistence;
+using Infra.Persistence.ReadServices;
 using Infra.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +26,7 @@ public static class DependencyInjection
                     errorCodesToAdd: null));
         });
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserReadService, UserReadService>();
         return services;
     }
 }

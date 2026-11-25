@@ -6,10 +6,10 @@ Prova de conceito em .NET 10 para cadastrar, consultar, listar, atualizar e excl
 
 A solução está em `backend/UserManagement.slnx`.
 
-- `backend/src/Domain` contém a entidade de usuário e as regras de CPF.
-- `backend/src/Application` contém os casos de uso, o contrato de persistência e o pipeline MediatR com FluentValidation.
-- `backend/src/Api` contém os controllers, o contrato HTTP, o tratamento de erros e o OpenAPI.
-- `backend/src/Infra` contém o DbContext, o repositório PostgreSQL e as migrations.
+- `backend/src/Domain` contém a entidade `User` (`Entities/`), o enum `UserStatus` (`Enums/`), os objetos de valor `Cpf` e `Email` (`ValueObjects/`) e a `DomainException` (`Exceptions/`).
+- `backend/src/Application` contém os behaviors do MediatR (`Behaviors/`), as interfaces de persistência e leitura (`Interfaces/`), as exceções da aplicação (`Exceptions/`) e os casos de uso em `Users/`. Cada command fica em `Users/Commands/<Caso>/` e cada query em `Users/Queries/<Caso>/`, com request, handler e validator em arquivos separados. Os DTOs ficam em `Users/DTOs/`.
+- `backend/src/Api` contém os controllers, os contratos HTTP (`Requests/` e `Responses/`), o tratamento de erros, o conversor JSON do status e o OpenAPI.
+- `backend/src/Infra` contém o DbContext, o repositório, o serviço de leitura e as migrations.
 - `backend/tests` contém os testes de aplicação e os testes HTTP com PostgreSQL.
 
 ## Executar localmente

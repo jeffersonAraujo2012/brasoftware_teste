@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Api.IntegrationTests.Fixtures;
-using Application.Abstractions;
-using Application.Users;
-using Domain.Users;
+using Application.Interfaces;
+using Application.Users.DTOs;
+using Application.Users.Queries.ListUsers;
 using Infra.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -170,8 +170,8 @@ public sealed class UserLifecycleTests(PostgresFixture postgres)
         await using var factory = await ApiFactory.CreateAsync(postgres);
         await using var failingFactory = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
         {
-            services.RemoveAll<IUserRepository>();
-            services.AddScoped<IUserRepository, FailingRepository>();
+            services.RemoveAll<IUserReadService>();
+            services.AddScoped<IUserReadService, FailingReadService>();
         }));
         using var client = failingFactory.CreateClient();
 
@@ -212,17 +212,13 @@ public sealed class UserLifecycleTests(PostgresFixture postgres)
         return problem;
     }
 
-    private sealed class FailingRepository : IUserRepository
+    private sealed class FailingReadService : IUserReadService
     {
-        public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        public Task<UserDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("probe-internal-error");
 
-        public Task<(IReadOnlyList<User> Items, int TotalItems)> ListAsync(
+        public Task<(IReadOnlyList<UserDto> Items, int TotalItems)> ListAsync(
             int page, int pageSize, UserSortField sortField, SortDirection sortDirection, CancellationToken cancellationToken)
             => throw new NotSupportedException();
-
-        public Task AddAsync(User user, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task UpdateAsync(User user, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task DeleteAsync(User user, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

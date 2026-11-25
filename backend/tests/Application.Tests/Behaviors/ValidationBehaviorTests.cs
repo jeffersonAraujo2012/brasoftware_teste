@@ -1,6 +1,8 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Application.Tests.Behaviors;
 
@@ -11,6 +13,7 @@ public sealed class ValidationBehaviorTests
     {
         var probe = new Probe();
         var services = new ServiceCollection();
+        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         services.AddApplication();
         services.AddSingleton<IRequestHandler<ProbeCommand, string>>(probe);
         services.AddSingleton<IValidator<ProbeCommand>>(new ValueValidator());

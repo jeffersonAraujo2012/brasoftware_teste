@@ -23,17 +23,27 @@ backend/
 ├── src/
 │   ├── Domain/
 │   │   ├── Domain.csproj
-│   │   └── Users/                    # User, UserStatus and CPF rules
+│   │   ├── Entities/                 # User
+│   │   ├── Enums/                    # UserStatus
+│   │   ├── Exceptions/               # DomainException
+│   │   └── ValueObjects/             # Cpf and Email
 │   ├── Application/
 │   │   ├── Application.csproj
-│   │   ├── Abstractions/             # IUserRepository
-│   │   ├── Behaviors/                # ValidationBehavior
-│   │   └── Users/                    # Commands, queries, handlers and validators
+│   │   ├── Behaviors/                # LoggingBehavior and ValidationBehavior
+│   │   ├── Exceptions/               # UserNotFoundException and UserConflictException
+│   │   ├── Interfaces/               # IUserRepository and IUserReadService
+│   │   └── Users/
+│   │       ├── Commands/             # CreateUser, UpdateUser and DeleteUser
+│   │       ├── Queries/              # GetUser and ListUsers
+│   │       └── DTOs/                 # UserDto and UserPageDto
 │   ├── Api/
 │   │   ├── Api.csproj
 │   │   ├── Controllers/
-│   │   ├── Contracts/
+│   │   ├── Requests/
+│   │   ├── Responses/
 │   │   ├── Errors/
+│   │   ├── OpenApi/
+│   │   ├── Serialization/
 │   │   ├── Program.cs
 │   │   ├── appsettings.json
 │   │   └── appsettings.Development.json
@@ -42,6 +52,7 @@ backend/
 │       └── Persistence/
 │           ├── Configurations/
 │           ├── Migrations/
+│           ├── ReadServices/
 │           ├── Repositories/
 │           └── UserManagementDbContext.cs
 └── tests/
@@ -53,18 +64,20 @@ backend/
 
 | Componente | Responsabilidade | Referências diretas entre projetos de produção |
 | --- | --- | --- |
-| `Domain` | Entidade `User`, status e invariantes de domínio. | Nenhuma |
-| `Application` | Casos de uso, contratos de persistência, validação e tratamento de resultados dos casos de uso. | `Domain` |
+| `Domain` | Entidade `User`, enum `UserStatus`, objetos de valor `Cpf` e `Email` e invariantes de domínio. | Nenhuma |
+| `Application` | Casos de uso separados em commands e queries, contratos de persistência e de leitura, DTOs, validação e logging do pipeline. | `Domain` |
 | `Api` | Camada externa. Controllers, contratos HTTP, OpenAPI, mapeamento de erros e composição da injeção de dependências. | `Application` e `Infra` |
-| `Infra` | Camada externa. Implementação do repositório, configuração do PostgreSQL e do EF Core, mapeamentos e migrations. | `Application` e `Domain` |
+| `Infra` | Camada externa. Implementação do repositório e do serviço de leitura, configuração do PostgreSQL e do EF Core, mapeamentos e migrations. | `Application` e `Domain` |
 
-`Api` e `Infra` estão na mesma camada externa. A referência da `Api` para a `Infra` serve à composição das dependências em `Program.cs`. Os controllers enviam requests a `ISender.Send`, repassando o token de cancelamento. Os handlers acessam a persistência pelo contrato da `Application`.
+`Api` e `Infra` estão na mesma camada externa. A referência da `Api` para a `Infra` serve à composição das dependências em `Program.cs`. Os controllers enviam requests a `ISender.Send`, repassando o token de cancelamento. Os handlers de commands gravam pelo `IUserRepository`. Os handlers de queries leem pelo `IUserReadService`, que devolve DTOs sem rastreamento do EF Core.
 
 ## Casos de uso e validação
 
-Use MediatR 12.5.0 para despachar commands de escrita e queries de leitura. A `Application` registra os handlers do seu assembly e o behavior genérico `ValidationBehavior<TRequest, TResponse>` com `AddOpenBehavior`. A `Api` chama esse registro na inicialização. [MediatR 12.5.0](https://github.com/LuckyPennySoftware/MediatR/blob/v12.5.0/README.md#registering-with-iservicecollection).
+Use MediatR 12.5.0 para despachar commands de escrita e queries de leitura. A `Application` registra os handlers do seu assembly e os behaviors genéricos `LoggingBehavior<TRequest, TResponse>` e `ValidationBehavior<TRequest, TResponse>`, nessa ordem, com `AddOpenBehavior`. O `LoggingBehavior` registra apenas o nome do request, a duração e o tipo da exceção, nunca o conteúdo. A `Api` chama esse registro na inicialização. [MediatR 12.5.0](https://github.com/LuckyPennySoftware/MediatR/blob/v12.5.0/README.md#registering-with-iservicecollection).
 
 Registre os validadores do assembly da `Application` com `AddValidatorsFromAssembly`. O behavior implementa `IPipelineBehavior<TRequest, TResponse>`, chama `ValidateAsync` nos `IValidator<TRequest>` registrados e agrega os erros antes de chamar o handler. Se houver erros, encerra a execução e a `Api` responde com `400` e mensagens por campo. Aplique a validação aos comandos de criação e atualização e às operações que recebem ID. Um UUID vazio é inválido. [Injeção de dependências do FluentValidation](https://docs.fluentvalidation.net/en/latest/di.html) e [validação assíncrona](https://docs.fluentvalidation.net/en/latest/async.html).
+
+Cada caso de uso fica em uma pasta própria, como `Users/Commands/CreateUser/`, com o command ou a query, o handler e o validator em arquivos separados. Os validators declaram as regras diretamente no construtor com `RuleFor` e interrompem cada cadeia na primeira falha (`RuleLevelCascadeMode = CascadeMode.Stop`). As regras de CPF e e-mail reutilizam `Cpf.IsValid` e `Email.IsValid` do domínio.
 
 Valide também os parâmetros de `ListUsersQuery` com FluentValidation. A `Infra` mapeia cada campo de ordenação aceito para a coluna correspondente e aplica a ordenação e a paginação no PostgreSQL.
 
