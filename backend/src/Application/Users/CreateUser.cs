@@ -19,8 +19,11 @@ internal sealed class CreateUserHandler(IUserRepository repository, TimeProvider
 {
     public async Task<UserDetails> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        // Match the precision persisted by PostgreSQL so reads preserve the creation response.
+        var createdAt = now.AddTicks(-(now.Ticks % TimeSpan.TicksPerMicrosecond));
         var user = User.Create(Guid.NewGuid(), request.FullName!, request.Email!, request.Cpf!,
-            timeProvider.GetUtcNow().UtcDateTime, UserInputRules.ParseStatus(request.Status!));
+            createdAt, UserInputRules.ParseStatus(request.Status!));
         await repository.AddAsync(user, cancellationToken);
         return UserDetails.From(user);
     }

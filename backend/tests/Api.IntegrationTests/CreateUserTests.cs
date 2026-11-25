@@ -147,9 +147,4 @@ public sealed class CreateUserTests(PostgresFixture postgres)
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(field, problem.GetProperty("field").GetString());
     }
-
-    private sealed class FixedTimeProvider(DateTimeOffset value) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => value;
-    }
 }
