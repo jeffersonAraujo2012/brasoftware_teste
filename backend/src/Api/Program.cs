@@ -1,7 +1,10 @@
+using Infra;
+
 var builder = WebApplication.CreateBuilder(args);
 
 const string FrontendPolicy = "Frontend";
 builder.Services.AddControllers();
+builder.Services.AddInfrastructure();
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {
