@@ -1,9 +1,17 @@
+using Api.Errors;
+using Application;
 using Infra;
 
 var builder = WebApplication.CreateBuilder(args);
 
 const string FrontendPolicy = "Frontend";
-builder.Services.AddControllers();
+builder.Services.AddControllers().ConfigureApiBehaviorOptions(
+    options => options.InvalidModelStateResponseFactory = ApiProblemDetails.FromModelState);
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+    context.ProblemDetails.Extensions["traceId"] = ApiProblemDetails.TraceId(context.HttpContext));
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -20,6 +28,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseCors(FrontendPolicy);
 app.MapControllers();
 app.Run();
