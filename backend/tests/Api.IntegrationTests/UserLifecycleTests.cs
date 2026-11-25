@@ -5,6 +5,8 @@ using Api.IntegrationTests.Fixtures;
 using Application.Abstractions;
 using Application.Users;
 using Domain.Users;
+using Infra.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -142,6 +144,24 @@ public sealed class UserLifecycleTests(PostgresFixture postgres)
         Assert.Equal("person@example.test", user.GetProperty("email").GetString());
         Assert.Equal("01234567890", user.GetProperty("cpf").GetString());
         Assert.Equal("inactive", user.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task ReadRecoversAfterPostgresClosesPooledConnection()
+    {
+        await using var factory = await ApiFactory.CreateAsync(postgres);
+        using var client = factory.CreateClient();
+        var (location, created) = await CreateUserAsync(client);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<UserManagementDbContext>();
+        var terminated = await postgres.TerminateDatabaseConnectionsAsync(database.Database.GetConnectionString()!);
+        Assert.True(terminated > 0);
+
+        using var response = await client.GetAsync(location);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var recovered = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(created.GetProperty("id").GetGuid(), recovered.GetProperty("id").GetGuid());
     }
 
     [Fact]

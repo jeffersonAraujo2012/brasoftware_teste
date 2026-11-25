@@ -29,4 +29,20 @@ public sealed class PostgresFixture : IAsyncLifetime
             Database = database
         }.ConnectionString;
     }
+
+    public async Task<long> TerminateDatabaseConnectionsAsync(string targetConnectionString)
+    {
+        var database = new NpgsqlConnectionStringBuilder(targetConnectionString).Database!;
+        await using var connection = new NpgsqlConnection(_container.GetConnectionString());
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand("""
+            WITH connections AS MATERIALIZED (
+                SELECT pid FROM pg_stat_activity WHERE datname = @database
+            )
+            SELECT count(*) FROM connections WHERE pg_terminate_backend(pid, 5000)
+            """, connection);
+        command.Parameters.AddWithValue("database", database);
+
+        return (long)(await command.ExecuteScalarAsync())!;
+    }
 }

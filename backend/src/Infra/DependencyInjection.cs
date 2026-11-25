@@ -20,7 +20,9 @@ public static class DependencyInjection
                 throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be configured.");
             }
 
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(connectionString, postgres =>
+                postgres.EnableRetryOnFailure(maxRetryCount: 2, maxRetryDelay: TimeSpan.FromSeconds(1),
+                    errorCodesToAdd: null));
         });
         services.AddScoped<IUserRepository, UserRepository>();
         return services;
